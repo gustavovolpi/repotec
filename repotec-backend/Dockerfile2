@@ -1,0 +1,31 @@
+# Build stage
+FROM node:20-alpine as builder
+
+# Frontend build
+WORKDIR /app/frontend
+COPY repotec-app/package*.json ./
+RUN npm install
+COPY repotec-app/ .
+RUN npm run build
+
+# Backend build
+WORKDIR /app/backend
+COPY repotec-backend/package*.json ./
+RUN npm install
+COPY repotec-backend/ .
+RUN npm run build
+
+# Production stage
+FROM node:20-alpine
+
+WORKDIR /app
+COPY --from=builder /app/backend/dist ./dist
+COPY --from=builder /app/backend/node_modules ./node_modules
+COPY --from=builder /app/backend/package*.json ./
+COPY --from=builder /app/frontend/dist ./public
+
+# Criar diretório de uploads
+RUN mkdir -p uploads
+
+EXPOSE 3000
+CMD ["npm", "run", "start:prod"] 
